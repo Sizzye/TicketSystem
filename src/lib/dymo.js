@@ -179,6 +179,19 @@ function normalizeDymoPrinter(printer) {
   };
 }
 
+function uniquePrinters(printers) {
+  const seen = new Set();
+
+  return printers.filter((printer) => {
+    if (!printer.name || seen.has(printer.name)) {
+      return false;
+    }
+
+    seen.add(printer.name);
+    return true;
+  });
+}
+
 export function buildTicketLabelText(ticket) {
   return [
     ticket.ticketNumber ? `#${ticket.ticketNumber}` : "",
@@ -204,10 +217,25 @@ export function getDymoPrinters() {
   try {
     framework.init();
     const printers = framework.getPrinters?.() || [];
-    return printers.map(normalizeDymoPrinter).filter((printer) => printer.isConnected);
+    return printers.map(normalizeDymoPrinter);
   } catch (_error) {
     return [];
   }
+}
+
+function getDymoPrintCandidates(preferredPrinterName) {
+  const printers = getDymoPrinters();
+  const labelWriters = printers.filter((printer) => printer.printerType === "LabelWriterPrinter");
+  const sourcePrinters = labelWriters.length ? labelWriters : printers;
+  const preferredPrinter = sourcePrinters.find((printer) => printer.name === preferredPrinterName);
+  const connectedPrinters = sourcePrinters.filter((printer) => printer.isConnected);
+  const fallbackPrinters = sourcePrinters.filter((printer) => !printer.isConnected);
+
+  return uniquePrinters([
+    preferredPrinter,
+    ...connectedPrinters,
+    ...fallbackPrinters
+  ].filter(Boolean));
 }
 
 export function getDymoAvailability() {
@@ -224,12 +252,12 @@ export function getDymoAvailability() {
   try {
     framework.init();
     const environment = framework.checkEnvironment?.();
-    const printers = getDymoPrinters();
+    const printers = getDymoPrinters().filter((printer) => printer.isConnected);
 
     if (!printers.length) {
       return {
         ready: false,
-      reason: "No connected DYMO printers detected",
+          reason: "No connected DYMO printers detected",
         environment,
         printers
       };
@@ -262,25 +290,38 @@ export function printTicketWithDymo(ticket, printerName) {
 
   try {
     framework.init();
+    framework.getPrinters?.();
+    framework.init();
 
-    const printers = getDymoPrinters();
-    const labelWriter =
-      printers.find((printer) => printer.printerType === "LabelWriterPrinter") || printers[0];
-    const targetPrinter = printerName || labelWriter?.name || "";
+    const candidates = getDymoPrintCandidates(printerName);
 
-    if (!targetPrinter) {
+    if (!candidates.length) {
       return {
         ok: false,
-        reason: "No connected DYMO printer found"
+        reason: "No DYMO printer found"
       };
     }
 
-    const label = framework.openLabelXml(buildDymoLabelXml(ticket));
-    label.print(targetPrinter);
+    const labelXml = buildDymoLabelXml(ticket);
+    const errors = [];
+
+    for (const printer of candidates) {
+      try {
+        const label = framework.openLabelXml(labelXml);
+        label.print(printer.name);
+
+        return {
+          ok: true,
+          printerName: printer.name
+        };
+      } catch (error) {
+        errors.push(`${printer.name}: ${error instanceof Error ? error.message : "print failed"}`);
+      }
+    }
 
     return {
-      ok: true,
-      printerName: targetPrinter
+      ok: false,
+      reason: errors[0] || "DYMO print failed"
     };
   } catch (error) {
     return {

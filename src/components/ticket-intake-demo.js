@@ -137,6 +137,7 @@ export default function TicketIntakeDemo() {
       return;
     }
 
+    setNotice(null);
     setSavedTicket(null);
     router.push("/tickets");
   }

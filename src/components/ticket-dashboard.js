@@ -205,6 +205,8 @@ export default function TicketDashboard({ heading, eyebrow }) {
         title: "DYMO print failed",
         message: result.reason || "The DYMO printer did not respond."
       });
+    } else {
+      setNotice(null);
     }
 
     setOpenMenu(null);
