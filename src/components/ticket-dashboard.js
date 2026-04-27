@@ -8,6 +8,7 @@ import {
   calculateTicketStats,
   createEmptyTicketForm,
   createTicketFormFromTicket,
+  formatPhoneNumber,
   getStatusOption,
   isFinishedTicket,
   loadTickets,
@@ -249,7 +250,10 @@ export default function TicketDashboard({ heading, eyebrow }) {
 
   function updateEditField(event) {
     const { name, value } = event.target;
-    setEditForm((current) => ({ ...current, [name]: value }));
+    setEditForm((current) => ({
+      ...current,
+      [name]: name === "phone" ? formatPhoneNumber(value) : value
+    }));
   }
 
   async function handleEditSave() {
@@ -280,7 +284,7 @@ export default function TicketDashboard({ heading, eyebrow }) {
       ...ticket,
       ticketNumber: editForm.ticketNumber.trim(),
       customerName: editForm.customerName.trim(),
-      phone: editForm.phone.trim(),
+      phone: formatPhoneNumber(editForm.phone),
       email: editForm.email.trim(),
       status: editForm.status,
       password: editForm.password.trim(),
@@ -431,7 +435,7 @@ export default function TicketDashboard({ heading, eyebrow }) {
                       </td>
                       <td>
                         <strong>{ticket.customerName}</strong>
-                        <span className="row-note">{ticket.phone}</span>
+                        <span className="row-note">{formatPhoneNumber(ticket.phone)}</span>
                       </td>
                       <td>
                         <strong>{ticket.device}</strong>
@@ -611,7 +615,13 @@ export default function TicketDashboard({ heading, eyebrow }) {
               </label>
               <label className="modal-field">
                 <span>Phone number</span>
-                <input name="phone" value={editForm.phone} onChange={updateEditField} />
+                <input
+                  name="phone"
+                  inputMode="numeric"
+                  placeholder="555-123-4567"
+                  value={editForm.phone}
+                  onChange={updateEditField}
+                />
               </label>
               <label className="modal-field">
                 <span>Email</span>

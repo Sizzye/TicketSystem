@@ -1,3 +1,5 @@
+import { formatPhoneNumber } from "@/lib/tickets";
+
 function escapeXml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -60,7 +62,7 @@ function textObject({
 function buildDymoLabelXml(ticket) {
   const ticketNumber = ticket.ticketNumber ? `#${ticket.ticketNumber}` : "No ticket";
   const customerName = limitText(ticket.customerName || "Customer", 34);
-  const phone = ticket.phone || "No phone";
+  const phone = formatPhoneNumber(ticket.phone) || "No phone";
   const device = limitText(ticket.device || "No device", 32);
   const password = limitText(ticket.password ? `PW: ${ticket.password}` : "PW: none", 22);
   const issue = limitText(ticket.issue ? `Issue: ${ticket.issue}` : "Issue: no note", 56);
@@ -183,7 +185,7 @@ export function buildTicketLabelText(ticket) {
     ticket.checkInDate || "",
     ticket.customerName || "",
     ticket.device || "",
-    ticket.phone || "",
+    formatPhoneNumber(ticket.phone) || "",
     ticket.password ? `PW: ${ticket.password}` : "",
     ticket.issue || "",
     ticket.accessories ? `Acc: ${ticket.accessories}` : ""

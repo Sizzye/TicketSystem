@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { printTicketWithDymo } from "@/lib/dymo";
 import {
   createEmptyTicketForm,
+  formatPhoneNumber,
   loadTickets,
   nextTicketNumber,
   printTicketLabel,
@@ -48,7 +49,10 @@ export default function TicketIntakeDemo() {
 
   function updateField(event) {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => ({
+      ...current,
+      [name]: name === "phone" ? formatPhoneNumber(value) : value
+    }));
   }
 
   async function handleSaveTicket() {
@@ -66,7 +70,7 @@ export default function TicketIntakeDemo() {
       id: nextId,
       ticketNumber,
       customerName: form.customerName.trim(),
-      phone: form.phone.trim(),
+      phone: formatPhoneNumber(form.phone),
       email: form.email.trim(),
       password: form.password.trim(),
       device: form.device.trim(),
@@ -173,7 +177,13 @@ export default function TicketIntakeDemo() {
 
           <label className="field-block">
             <span>Phone number</span>
-            <input name="phone" value={form.phone} onChange={updateField} />
+            <input
+              name="phone"
+              inputMode="numeric"
+              placeholder="555-123-4567"
+              value={form.phone}
+              onChange={updateField}
+            />
           </label>
 
           <label className="field-block">
@@ -221,7 +231,7 @@ export default function TicketIntakeDemo() {
                 </div>
                 <h3>{form.customerName || "Customer name"}</h3>
                 <p className="sticker-device-line">{form.device || "Device"}</p>
-                <p className="sticker-phone-line">{form.phone || "Phone"}</p>
+                <p className="sticker-phone-line">{formatPhoneNumber(form.phone) || "Phone"}</p>
                 {form.password ? <p className="sticker-password-line">PW: {form.password}</p> : null}
                 <p className="sticker-issue-line">{form.issue || "Issue note"}</p>
                 <p className="sticker-accessories-line">{form.accessories || "Accessories"}</p>
@@ -241,7 +251,7 @@ export default function TicketIntakeDemo() {
               </div>
               <h3>{form.customerName || "Customer name"}</h3>
               <p className="sticker-device-line">{form.device || "Device"}</p>
-              <p className="sticker-phone-line">{form.phone || "Phone"}</p>
+              <p className="sticker-phone-line">{formatPhoneNumber(form.phone) || "Phone"}</p>
               {form.password ? <p className="sticker-password-line">PW: {form.password}</p> : null}
               <p className="sticker-issue-line">{form.issue || "Issue note"}</p>
               <p className="sticker-accessories-line">{form.accessories || "Accessories"}</p>

@@ -54,6 +54,20 @@ export function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+export function formatPhoneNumber(value) {
+  const digits = normalizePhone(value).slice(0, 10);
+
+  if (digits.length <= 3) {
+    return digits;
+  }
+
+  if (digits.length <= 6) {
+    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  }
+
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export function sortTickets(tickets) {
   return [...tickets].sort((left, right) => {
     return new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime();
@@ -65,7 +79,7 @@ function normalizeTicketRow(row) {
     id: row.id,
     ticketNumber: row.ticket_number,
     customerName: row.customer_name,
-    phone: row.phone,
+    phone: formatPhoneNumber(row.phone),
     email: row.email || "",
     status: row.status || "checked-in",
     password: row.password || "",
@@ -83,7 +97,7 @@ function toTicketRow(ticket) {
     id: ticket.id,
     ticket_number: ticket.ticketNumber,
     customer_name: ticket.customerName,
-    phone: ticket.phone,
+    phone: formatPhoneNumber(ticket.phone),
     email: ticket.email || "",
     status: ticket.status || "checked-in",
     password: ticket.password || "",
@@ -347,7 +361,7 @@ export function printTicketLabel(ticket) {
         <span>${escapeHtml(ticket.checkInDate)}</span>
       </div>
       <h1>${escapeHtml(ticket.customerName)}</h1>
-      <p class="phone">${escapeHtml(ticket.phone)}</p>
+      <p class="phone">${escapeHtml(formatPhoneNumber(ticket.phone))}</p>
       <div class="detail-row">
         <p>${escapeHtml(ticket.device)}</p>
         ${passwordMarkup || "<p>PW: none</p>"}
