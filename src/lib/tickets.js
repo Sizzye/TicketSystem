@@ -1,0 +1,248 @@
+export const TICKET_STORAGE_KEY = "repair-desk-tickets";
+
+export const STATUS_OPTIONS = [
+  { value: "checked-in", label: "Checked In", tone: "checked-in" },
+  { value: "in-repair", label: "In Repair", tone: "repair" },
+  { value: "waiting-parts", label: "Waiting on Parts", tone: "parts" },
+  { value: "ready", label: "Ready", tone: "ready" },
+  { value: "picked-up", label: "Picked Up", tone: "repair" }
+];
+
+export function formatToday() {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(new Date());
+}
+
+export function createEmptyTicketForm() {
+  return {
+    ticketNumber: "",
+    customerName: "",
+    phone: "",
+    email: "",
+    status: "checked-in",
+    password: "",
+    device: "",
+    issue: "",
+    checkInDate: formatToday(),
+    accessories: ""
+  };
+}
+
+export function createTicketFormFromTicket(ticket) {
+  return {
+    ticketNumber: ticket?.ticketNumber || "",
+    customerName: ticket?.customerName || "",
+    phone: ticket?.phone || "",
+    email: ticket?.email || "",
+    status: ticket?.status || "checked-in",
+    password: ticket?.password || "",
+    device: ticket?.device || "",
+    issue: ticket?.issue || "",
+    checkInDate: ticket?.checkInDate || formatToday(),
+    accessories: ticket?.accessories || ""
+  };
+}
+
+export function getStatusOption(value) {
+  return STATUS_OPTIONS.find((option) => option.value === value) || STATUS_OPTIONS[0];
+}
+
+export function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+export function sortTickets(tickets) {
+  return [...tickets].sort((left, right) => {
+    return new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime();
+  });
+}
+
+export function loadStoredTickets() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(TICKET_STORAGE_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? sortTickets(parsed) : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+export function persistTickets(tickets) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const sortedTickets = sortTickets(tickets);
+  window.localStorage.setItem(TICKET_STORAGE_KEY, JSON.stringify(sortedTickets));
+  window.dispatchEvent(new Event("tickets:changed"));
+}
+
+export function nextTicketNumber(tickets) {
+  const highestNumber = tickets.reduce((maxValue, ticket) => {
+    const numericPart = Number.parseInt(String(ticket.ticketNumber || "").replace(/\D/g, ""), 10);
+    return Number.isFinite(numericPart) ? Math.max(maxValue, numericPart) : maxValue;
+  }, 1041);
+
+  return `RPR-${String(highestNumber + 1).padStart(4, "0")}`;
+}
+
+export function calculateTicketStats(tickets) {
+  const today = formatToday();
+
+  return [
+    {
+      label: "Checked in today",
+      value: String(tickets.filter((ticket) => ticket.checkInDate === today).length)
+    },
+    {
+      label: "In repair",
+      value: String(tickets.filter((ticket) => ticket.status === "in-repair").length)
+    },
+    {
+      label: "Ready",
+      value: String(tickets.filter((ticket) => ticket.status === "ready").length)
+    },
+    {
+      label: "Open tickets",
+      value: String(tickets.filter((ticket) => ticket.status !== "picked-up").length)
+    }
+  ];
+}
+
+export function isFinishedTicket(ticket, now = Date.now()) {
+  if (!ticket || ticket.status !== "picked-up") {
+    return false;
+  }
+
+  const completedAt = new Date(ticket.updatedAt || ticket.createdAt || 0).getTime();
+
+  if (!Number.isFinite(completedAt) || completedAt <= 0) {
+    return false;
+  }
+
+  return now - completedAt >= 24 * 60 * 60 * 1000;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+export function printTicketLabel(ticket) {
+  if (typeof window === "undefined" || !ticket) {
+    return {
+      ok: false,
+      reason: "Nothing to print."
+    };
+  }
+
+  const printWindow = window.open("", "_blank", "width=420,height=320");
+
+  if (!printWindow) {
+    return {
+      ok: false,
+      reason: "Allow popups to print the sticker."
+    };
+  }
+
+  const passwordMarkup = ticket.password ? `<p>${escapeHtml(`PW: ${ticket.password}`)}</p>` : "";
+
+  const markup = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(ticket.ticketNumber)} label</title>
+    <style>
+      @page {
+        size: auto;
+        margin: 0.12in;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        color: #111827;
+        background: #ffffff;
+      }
+
+      .label {
+        width: 2.9in;
+        min-height: 1.1in;
+        padding: 0.28in;
+        border: 1px solid #111827;
+        border-radius: 10px;
+        display: grid;
+        gap: 0.1in;
+        box-sizing: border-box;
+      }
+
+      .topline {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.2in;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.2;
+        color: #4b5563;
+      }
+
+      .issue {
+        padding-top: 0.06in;
+        border-top: 1px solid #e5e7eb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="label">
+      <div class="topline">
+        <span>#${escapeHtml(ticket.ticketNumber)}</span>
+        <span>${escapeHtml(ticket.checkInDate)}</span>
+      </div>
+      <h1>${escapeHtml(ticket.customerName)}</h1>
+      <p>${escapeHtml(ticket.device)}</p>
+      <p>${escapeHtml(ticket.phone)}</p>
+      ${passwordMarkup}
+      <p class="issue">${escapeHtml(ticket.issue || "No issue note")}</p>
+      <p>${escapeHtml(ticket.accessories || "No accessories")}</p>
+    </div>
+    <script>
+      window.addEventListener("load", () => {
+        window.print();
+        window.setTimeout(() => window.close(), 200);
+      });
+    </script>
+  </body>
+</html>`;
+
+  printWindow.document.open();
+  printWindow.document.write(markup);
+  printWindow.document.close();
+
+  return {
+    ok: true
+  };
+}
