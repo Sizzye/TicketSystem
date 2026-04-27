@@ -695,6 +695,8 @@ h3 {
 .status-menu-floating {
   position: fixed;
   z-index: 9999;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
 }
 
 .status-menu-item {

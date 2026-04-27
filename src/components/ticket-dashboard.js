@@ -332,6 +332,18 @@ export default function TicketDashboard({ heading, eyebrow }) {
 
   function toggleStatusMenu(ticketId, event) {
     const rect = event.currentTarget.getBoundingClientRect();
+    const menuHeight = 236;
+    const menuWidth = Math.max(190, rect.width);
+    const viewportPadding = 12;
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+    const shouldOpenAbove = spaceBelow < menuHeight && rect.top > spaceBelow;
+    const top = shouldOpenAbove
+      ? Math.max(viewportPadding, rect.top - menuHeight - 8)
+      : Math.min(rect.bottom + 8, window.innerHeight - menuHeight - viewportPadding);
+    const left = Math.min(
+      Math.max(viewportPadding, rect.left),
+      window.innerWidth - menuWidth - viewportPadding
+    );
 
     setOpenStatusMenu((current) => {
       if (current?.id === ticketId) {
@@ -340,9 +352,9 @@ export default function TicketDashboard({ heading, eyebrow }) {
 
       return {
         id: ticketId,
-        top: rect.bottom + 8,
-        left: Math.max(12, rect.left),
-        width: Math.max(190, rect.width)
+        top,
+        left,
+        width: menuWidth
       };
     });
   }
