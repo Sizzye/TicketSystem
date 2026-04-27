@@ -122,12 +122,12 @@ export default function TicketIntakeDemo() {
     }, 80);
   }
 
-  function handleDymoPrintSavedTicket() {
+  async function handleDymoPrintSavedTicket() {
     if (!savedTicket) {
       return;
     }
 
-    const result = printTicketWithDymo(savedTicket);
+    const result = await printTicketWithDymo(savedTicket);
 
     if (!result.ok) {
       setNotice({

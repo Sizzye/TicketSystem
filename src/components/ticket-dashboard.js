@@ -188,7 +188,7 @@ export default function TicketDashboard({ heading, eyebrow }) {
     setDeleteTargetId(null);
   }
 
-  function handleDymoReprint(ticket) {
+  async function handleDymoReprint(ticket) {
     if (!ticket) {
       setNotice({
         title: "Unable to reprint",
@@ -198,7 +198,7 @@ export default function TicketDashboard({ heading, eyebrow }) {
       return;
     }
 
-    const result = printTicketWithDymo(ticket);
+    const result = await printTicketWithDymo(ticket);
 
     if (!result.ok) {
       setNotice({
