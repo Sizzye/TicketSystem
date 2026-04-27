@@ -24,7 +24,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={bodyFont.variable}>
-        <Script src="/vendor/dymo.connect.framework.js" strategy="afterInteractive" />
+        <Script src="/vendor/dymo.connect.framework.js" strategy="beforeInteractive" />
         <div className="app-frame">
           <AppTopbar session={session} />
           <div className="app-page">{children}</div>

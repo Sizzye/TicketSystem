@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { printTicketWithDymo } from "@/lib/dymo";
+import { printTicketWithDymo, warmUpDymo } from "@/lib/dymo";
 import {
   createEmptyTicketForm,
   formatPhoneNumber,
@@ -45,6 +45,7 @@ export default function TicketIntakeDemo() {
     }
 
     prepareForm();
+    warmUpDymo();
   }, []);
 
   function updateField(event) {

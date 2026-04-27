@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { printTicketWithDymo } from "@/lib/dymo";
+import { printTicketWithDymo, warmUpDymo } from "@/lib/dymo";
 import {
   STATUS_OPTIONS,
   calculateTicketStats,
@@ -55,6 +55,7 @@ export default function TicketDashboard({ heading, eyebrow }) {
     }
 
     syncTickets();
+    warmUpDymo();
 
     return () => {
       isMounted = false;

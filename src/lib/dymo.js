@@ -297,6 +297,40 @@ export function getDymoAvailability() {
   }
 }
 
+export async function warmUpDymo() {
+  const framework = await waitForFramework();
+
+  if (!framework) {
+    return {
+      ready: false,
+      reason: "DYMO framework not loaded",
+      printers: []
+    };
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      framework.init();
+      framework.checkEnvironment?.();
+      const printers = getDymoPrinters(framework).filter((printer) => printer.isConnected);
+
+      if (printers.length) {
+        return {
+          ready: true,
+          reason: "",
+          printers
+        };
+      }
+    } catch (_error) {
+      // Keep warming up; the web service can take a moment to answer after page load.
+    }
+
+    await wait(250);
+  }
+
+  return getDymoAvailability();
+}
+
 export async function printTicketWithDymo(ticket, printerName) {
   const framework = await waitForFramework();
 
