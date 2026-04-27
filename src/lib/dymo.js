@@ -171,7 +171,9 @@ function normalizeDymoPrinter(printer) {
   return {
     name: printer.name || printer.printerName || "DYMO Printer",
     modelName: printer.modelName || "",
-    printerType: printer.printerType || ""
+    printerType: printer.printerType || "",
+    isConnected: printer.isConnected !== false,
+    isLocal: printer.isLocal !== false
   };
 }
 
@@ -200,7 +202,7 @@ export function getDymoPrinters() {
   try {
     framework.init();
     const printers = framework.getPrinters?.() || [];
-    return printers.map(normalizeDymoPrinter);
+    return printers.map(normalizeDymoPrinter).filter((printer) => printer.isConnected);
   } catch (_error) {
     return [];
   }
@@ -225,7 +227,7 @@ export function getDymoAvailability() {
     if (!printers.length) {
       return {
         ready: false,
-        reason: "No DYMO printers detected",
+      reason: "No connected DYMO printers detected",
         environment,
         printers
       };
@@ -260,13 +262,14 @@ export function printTicketWithDymo(ticket, printerName) {
     framework.init();
 
     const printers = getDymoPrinters();
-    const targetPrinter =
-      printerName || printers[0]?.name || "";
+    const labelWriter =
+      printers.find((printer) => printer.printerType === "LabelWriterPrinter") || printers[0];
+    const targetPrinter = printerName || labelWriter?.name || "";
 
     if (!targetPrinter) {
       return {
         ok: false,
-        reason: "No DYMO printer found"
+        reason: "No connected DYMO printer found"
       };
     }
 
