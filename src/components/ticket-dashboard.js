@@ -187,7 +187,7 @@ export default function TicketDashboard({ heading, eyebrow }) {
     setDeleteTargetId(null);
   }
 
-  async function handleReprint(ticket) {
+  function handleDymoReprint(ticket) {
     if (!ticket) {
       setNotice({
         title: "Unable to reprint",
@@ -200,14 +200,32 @@ export default function TicketDashboard({ heading, eyebrow }) {
     const result = printTicketWithDymo(ticket);
 
     if (!result.ok) {
-      const fallback = await printTicketLabel(ticket);
+      setNotice({
+        title: "DYMO print failed",
+        message: result.reason || "The DYMO printer did not respond."
+      });
+    }
 
-      if (!fallback.ok) {
-        setNotice({
-          title: "Printing blocked",
-          message: fallback.reason || "The sticker could not be opened for printing."
-        });
-      }
+    setOpenMenu(null);
+  }
+
+  function handleBrowserReprint(ticket) {
+    if (!ticket) {
+      setNotice({
+        title: "Unable to reprint",
+        message: "This ticket could not be found."
+      });
+      setOpenMenu(null);
+      return;
+    }
+
+    const result = printTicketLabel(ticket);
+
+    if (!result.ok) {
+      setNotice({
+        title: "Printing blocked",
+        message: result.reason || "The sticker could not be opened for printing."
+      });
     }
 
     setOpenMenu(null);
@@ -500,9 +518,18 @@ export default function TicketDashboard({ heading, eyebrow }) {
               <button
                 type="button"
                 className="row-menu-item"
-                onClick={() => handleReprint(tickets.find((ticket) => ticket.id === openMenu.id))}
+                onClick={() => handleDymoReprint(tickets.find((ticket) => ticket.id === openMenu.id))}
               >
-                Reprint sticker
+                Print with DYMO
+              </button>
+              <button
+                type="button"
+                className="row-menu-item"
+                onClick={() =>
+                  handleBrowserReprint(tickets.find((ticket) => ticket.id === openMenu.id))
+                }
+              >
+                Browser print
               </button>
               <button
                 type="button"

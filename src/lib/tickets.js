@@ -285,11 +285,12 @@ export function printTicketLabel(ticket) {
       .label {
         width: 3.5in;
         height: 1.125in;
-        padding: 0.08in 0.11in;
+        padding: 0.055in 0.1in;
         border: 1px solid #111827;
         border-radius: 0;
         display: grid;
-        gap: 0.02in;
+        grid-template-rows: auto auto auto auto 1fr auto;
+        gap: 0.018in;
         box-sizing: border-box;
       }
 
@@ -297,26 +298,44 @@ export function printTicketLabel(ticket) {
         display: flex;
         justify-content: space-between;
         gap: 0.08in;
-        font-size: 8px;
+        font-size: 7px;
         font-weight: 700;
         text-transform: uppercase;
       }
 
       h1 {
         margin: 0;
-        font-size: 13px;
+        font-size: 15px;
         line-height: 1.1;
+        text-align: center;
       }
 
       p {
         margin: 0;
-        font-size: 8px;
+        font-size: 7px;
         line-height: 1.1;
         color: #4b5563;
       }
 
+      .phone {
+        font-size: 10px;
+        text-align: center;
+        text-decoration: underline;
+        color: #111827;
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.08in;
+      }
+
+      .detail-row p:last-child {
+        text-align: right;
+      }
+
       .issue {
-        padding-top: 0.02in;
+        padding-top: 0.018in;
         border-top: 1px solid #e5e7eb;
       }
     </style>
@@ -328,9 +347,11 @@ export function printTicketLabel(ticket) {
         <span>${escapeHtml(ticket.checkInDate)}</span>
       </div>
       <h1>${escapeHtml(ticket.customerName)}</h1>
-      <p>${escapeHtml(ticket.device)}</p>
-      <p>${escapeHtml(ticket.phone)}</p>
-      ${passwordMarkup}
+      <p class="phone">${escapeHtml(ticket.phone)}</p>
+      <div class="detail-row">
+        <p>${escapeHtml(ticket.device)}</p>
+        ${passwordMarkup || "<p>PW: none</p>"}
+      </div>
       <p class="issue">${escapeHtml(ticket.issue || "No issue note")}</p>
       <p>${escapeHtml(ticket.accessories || "No accessories")}</p>
     </div>
