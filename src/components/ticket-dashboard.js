@@ -10,10 +10,11 @@ import {
   createTicketFormFromTicket,
   getStatusOption,
   isFinishedTicket,
-  loadStoredTickets,
+  loadTickets,
   normalizePhone,
   printTicketLabel,
-  persistTickets,
+  removeTicket,
+  saveTicket,
   sortTickets
 } from "@/lib/tickets";
 
@@ -27,19 +28,35 @@ export default function TicketDashboard({ heading, eyebrow }) {
   const [editTargetId, setEditTargetId] = useState(null);
   const [editForm, setEditForm] = useState(() => createEmptyTicketForm());
   const [notice, setNotice] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    function syncTickets() {
-      setTickets(loadStoredTickets());
+    let isMounted = true;
+
+    async function syncTickets() {
+      setIsLoading(true);
+      const { data, error } = await loadTickets();
+
+      if (!isMounted) {
+        return;
+      }
+
+      setTickets(sortTickets(data));
+      setIsLoading(false);
+
+      if (error) {
+        setNotice({
+          title: "Supabase setup needed",
+          message:
+            "Run the tickets setup SQL in Supabase before using the live dashboard. The SQL file is included in this project."
+        });
+      }
     }
 
     syncTickets();
-    window.addEventListener("tickets:changed", syncTickets);
-    window.addEventListener("storage", syncTickets);
 
     return () => {
-      window.removeEventListener("tickets:changed", syncTickets);
-      window.removeEventListener("storage", syncTickets);
+      isMounted = false;
     };
   }, []);
 
@@ -112,36 +129,60 @@ export default function TicketDashboard({ heading, eyebrow }) {
 
   const openStatusTicket = tickets.find((ticket) => ticket.id === openStatusMenu?.id) || null;
 
-  function updateStoredTickets(nextTickets) {
-    const sortedTickets = sortTickets(nextTickets);
-    persistTickets(sortedTickets);
-    setTickets(sortedTickets);
+  function updateLocalTickets(nextTickets) {
+    setTickets(sortTickets(nextTickets));
   }
 
-  function handleStatusChange(ticketId, nextStatus) {
-    const nextTickets = tickets.map((ticket) => {
-      if (ticket.id !== ticketId) {
-        return ticket;
-      }
+  async function handleStatusChange(ticketId, nextStatus) {
+    const ticket = tickets.find((entry) => entry.id === ticketId);
 
-      return {
-        ...ticket,
-        status: nextStatus,
-        updatedAt: new Date().toISOString()
-      };
-    });
+    if (!ticket) {
+      setNotice({
+        title: "Unable to update status",
+        message: "This ticket could not be found."
+      });
+      return;
+    }
 
-    updateStoredTickets(nextTickets);
+    const nextTicket = {
+      ...ticket,
+      status: nextStatus,
+      updatedAt: new Date().toISOString()
+    };
+
+    const { data, error } = await saveTicket(nextTicket);
+
+    if (error) {
+      setNotice({
+        title: "Unable to update status",
+        message: error.message || "Supabase could not save this ticket."
+      });
+      return;
+    }
+
+    updateLocalTickets(
+      tickets.map((entry) => (entry.id === ticketId ? data || nextTicket : entry))
+    );
     setOpenStatusMenu(null);
   }
 
-  function handleDelete(ticketId) {
+  async function handleDelete(ticketId) {
     if (!ticketId) {
       return;
     }
 
+    const { error } = await removeTicket(ticketId);
+
+    if (error) {
+      setNotice({
+        title: "Unable to delete ticket",
+        message: error.message || "Supabase could not delete this ticket."
+      });
+      return;
+    }
+
     const nextTickets = tickets.filter((entry) => entry.id !== ticketId);
-    updateStoredTickets(nextTickets);
+    updateLocalTickets(nextTickets);
     setOpenMenu(null);
     setDeleteTargetId(null);
   }
@@ -193,7 +234,7 @@ export default function TicketDashboard({ heading, eyebrow }) {
     setEditForm((current) => ({ ...current, [name]: value }));
   }
 
-  function handleEditSave() {
+  async function handleEditSave() {
     if (
       !editForm.ticketNumber.trim() ||
       !editForm.customerName.trim() ||
@@ -207,28 +248,44 @@ export default function TicketDashboard({ heading, eyebrow }) {
       return;
     }
 
-    const nextTickets = tickets.map((ticket) => {
-      if (ticket.id !== editTargetId) {
-        return ticket;
-      }
+    const ticket = tickets.find((entry) => entry.id === editTargetId);
 
-      return {
-        ...ticket,
-        ticketNumber: editForm.ticketNumber.trim(),
-        customerName: editForm.customerName.trim(),
-        phone: editForm.phone.trim(),
-        email: editForm.email.trim(),
-        status: editForm.status,
-        password: editForm.password.trim(),
-        device: editForm.device.trim(),
-        issue: editForm.issue.trim(),
-        checkInDate: editForm.checkInDate.trim(),
-        accessories: editForm.accessories.trim(),
-        updatedAt: new Date().toISOString()
-      };
-    });
+    if (!ticket) {
+      setNotice({
+        title: "Unable to save changes",
+        message: "This ticket could not be found."
+      });
+      return;
+    }
 
-    updateStoredTickets(nextTickets);
+    const nextTicket = {
+      ...ticket,
+      ticketNumber: editForm.ticketNumber.trim(),
+      customerName: editForm.customerName.trim(),
+      phone: editForm.phone.trim(),
+      email: editForm.email.trim(),
+      status: editForm.status,
+      password: editForm.password.trim(),
+      device: editForm.device.trim(),
+      issue: editForm.issue.trim(),
+      checkInDate: editForm.checkInDate.trim(),
+      accessories: editForm.accessories.trim(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const { data, error } = await saveTicket(nextTicket);
+
+    if (error) {
+      setNotice({
+        title: "Unable to save changes",
+        message: error.message || "Supabase could not save this ticket."
+      });
+      return;
+    }
+
+    updateLocalTickets(
+      tickets.map((entry) => (entry.id === editTargetId ? data || nextTicket : entry))
+    );
     setEditTargetId(null);
   }
 
@@ -324,7 +381,12 @@ export default function TicketDashboard({ heading, eyebrow }) {
           </div>
         </div>
 
-        {filteredTickets.length ? (
+        {isLoading ? (
+          <div className="empty-card">
+            <h3>Loading tickets</h3>
+            <p>Pulling the latest queue from Supabase.</p>
+          </div>
+        ) : filteredTickets.length ? (
           <div className="ticket-table-wrap">
             <table className="ticket-table">
               <thead>

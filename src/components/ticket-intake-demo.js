@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import { printTicketWithDymo } from "@/lib/dymo";
 import {
   createEmptyTicketForm,
-  loadStoredTickets,
+  loadTickets,
   nextTicketNumber,
   printTicketLabel,
-  persistTickets
+  saveTicket
 } from "@/lib/tickets";
 
 export default function TicketIntakeDemo() {
@@ -29,9 +29,21 @@ export default function TicketIntakeDemo() {
   const [notice, setNotice] = useState(null);
 
   useEffect(() => {
-    const storedTickets = loadStoredTickets();
-    setForm(createEmptyTicketForm());
-    setTicketNumber(nextTicketNumber(storedTickets));
+    async function prepareForm() {
+      const { data, error } = await loadTickets();
+      setForm(createEmptyTicketForm());
+      setTicketNumber(nextTicketNumber(data));
+
+      if (error) {
+        setNotice({
+          title: "Supabase setup needed",
+          message:
+            "Run the tickets setup SQL in Supabase before saving live tickets. The SQL file is included in this project."
+        });
+      }
+    }
+
+    prepareForm();
   }, []);
 
   function updateField(event) {
@@ -39,19 +51,17 @@ export default function TicketIntakeDemo() {
     setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function saveTicket() {
+  async function handleSaveTicket() {
     if (!form.customerName.trim() || !form.phone.trim() || !form.device.trim()) {
       setNotice({
         title: "Missing information",
         message: "Enter customer name, phone number, and device."
       });
-      return false;
+      return;
     }
 
-    const storedTickets = loadStoredTickets();
     const currentTimestamp = new Date().toISOString();
     const nextId = ticketId || crypto.randomUUID();
-    const existingTicket = storedTickets.find((ticket) => ticket.id === nextId);
     const ticketRecord = {
       id: nextId,
       ticketNumber,
@@ -63,31 +73,30 @@ export default function TicketIntakeDemo() {
       issue: form.issue.trim(),
       accessories: form.accessories.trim(),
       checkInDate: form.checkInDate.trim(),
-      status: existingTicket?.status || "checked-in",
-      createdAt: existingTicket?.createdAt || currentTimestamp,
+      status: "checked-in",
+      createdAt: currentTimestamp,
       updatedAt: currentTimestamp
     };
 
-    const nextTickets = existingTicket
-      ? storedTickets.map((ticket) => (ticket.id === nextId ? ticketRecord : ticket))
-      : [ticketRecord, ...storedTickets];
+    const { data, error } = await saveTicket(ticketRecord);
 
-    persistTickets(nextTickets);
+    if (error) {
+      setNotice({
+        title: "Unable to save ticket",
+        message: error.message || "Supabase is not ready yet."
+      });
+      return;
+    }
+
     setTicketId(nextId);
-    setSavedTicket(ticketRecord);
-
-    return true;
+    setSavedTicket(data || ticketRecord);
   }
 
-  function handleSaveWithPrompt() {
-    saveTicket();
-  }
-
-  function startNewTicket() {
-    const storedTickets = loadStoredTickets();
+  async function startNewTicket() {
+    const { data } = await loadTickets();
     setForm(createEmptyTicketForm());
     setTicketId(null);
-    setTicketNumber(nextTicketNumber(storedTickets));
+    setTicketNumber(nextTicketNumber(data));
     setSavedTicket(null);
   }
 
@@ -95,8 +104,8 @@ export default function TicketIntakeDemo() {
     const printTarget = savedTicket;
 
     setSavedTicket(null);
-    window.setTimeout(async () => {
-      const result = await printTicketLabel(printTarget);
+    window.setTimeout(() => {
+      const result = printTicketLabel(printTarget);
 
       if (!result.ok) {
         setNotice({
@@ -133,8 +142,6 @@ export default function TicketIntakeDemo() {
     router.push("/tickets");
   }
 
-  const primaryActionLabel = ticketId ? "Update ticket" : "Create ticket";
-
   return (
     <section className="intake-layout">
       <form className="form-card form-card-rich no-print" onSubmit={(event) => event.preventDefault()}>
@@ -147,8 +154,8 @@ export default function TicketIntakeDemo() {
             <button type="button" className="button-secondary" onClick={startNewTicket}>
               New blank
             </button>
-            <button type="button" className="button-primary" onClick={handleSaveWithPrompt}>
-              {primaryActionLabel}
+            <button type="button" className="button-primary" onClick={handleSaveTicket}>
+              Create ticket
             </button>
           </div>
         </div>

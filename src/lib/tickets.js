@@ -1,4 +1,4 @@
-export const TICKET_STORAGE_KEY = "repair-desk-tickets";
+import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 export const STATUS_OPTIONS = [
   { value: "checked-in", label: "Checked In", tone: "checked-in" },
@@ -60,28 +60,130 @@ export function sortTickets(tickets) {
   });
 }
 
-export function loadStoredTickets() {
-  if (typeof window === "undefined") {
-    return [];
+function normalizeTicketRow(row) {
+  return {
+    id: row.id,
+    ticketNumber: row.ticket_number,
+    customerName: row.customer_name,
+    phone: row.phone,
+    email: row.email || "",
+    status: row.status || "checked-in",
+    password: row.password || "",
+    device: row.device,
+    issue: row.issue || "",
+    checkInDate: row.check_in_date,
+    accessories: row.accessories || "",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function toTicketRow(ticket) {
+  return {
+    id: ticket.id,
+    ticket_number: ticket.ticketNumber,
+    customer_name: ticket.customerName,
+    phone: ticket.phone,
+    email: ticket.email || "",
+    status: ticket.status || "checked-in",
+    password: ticket.password || "",
+    device: ticket.device,
+    issue: ticket.issue || "",
+    check_in_date: ticket.checkInDate,
+    accessories: ticket.accessories || "",
+    created_at: ticket.createdAt,
+    updated_at: ticket.updatedAt
+  };
+}
+
+export async function loadTickets() {
+  if (!hasSupabaseConfig()) {
+    return {
+      data: [],
+      error: new Error("Supabase environment variables are missing.")
+    };
   }
 
   try {
-    const raw = window.localStorage.getItem(TICKET_STORAGE_KEY);
-    const parsed = JSON.parse(raw || "[]");
-    return Array.isArray(parsed) ? sortTickets(parsed) : [];
-  } catch (_error) {
-    return [];
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("tickets")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return {
+        data: [],
+        error
+      };
+    }
+
+    return {
+      data: Array.isArray(data) ? data.map(normalizeTicketRow) : [],
+      error: null
+    };
+  } catch (error) {
+    return {
+      data: [],
+      error: error instanceof Error ? error : new Error("Unable to load tickets.")
+    };
   }
 }
 
-export function persistTickets(tickets) {
-  if (typeof window === "undefined") {
-    return;
+export async function saveTicket(ticket) {
+  if (!hasSupabaseConfig()) {
+    return {
+      data: null,
+      error: new Error("Supabase environment variables are missing.")
+    };
   }
 
-  const sortedTickets = sortTickets(tickets);
-  window.localStorage.setItem(TICKET_STORAGE_KEY, JSON.stringify(sortedTickets));
-  window.dispatchEvent(new Event("tickets:changed"));
+  try {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("tickets")
+      .upsert(toTicketRow(ticket), { onConflict: "id" })
+      .select()
+      .single();
+
+    if (error) {
+      return {
+        data: null,
+        error
+      };
+    }
+
+    return {
+      data: data ? normalizeTicketRow(data) : ticket,
+      error: null
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error: error instanceof Error ? error : new Error("Unable to save ticket.")
+    };
+  }
+}
+
+export async function removeTicket(ticketId) {
+  if (!hasSupabaseConfig()) {
+    return {
+      error: new Error("Supabase environment variables are missing.")
+    };
+  }
+
+  try {
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase.from("tickets").delete().eq("id", ticketId);
+
+    return {
+      error: error || null
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error : new Error("Unable to delete ticket.")
+    };
+  }
 }
 
 export function nextTicketNumber(tickets) {
