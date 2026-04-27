@@ -267,53 +267,56 @@ export function printTicketLabel(ticket) {
     <title>${escapeHtml(ticket.ticketNumber)} label</title>
     <style>
       @page {
-        size: auto;
-        margin: 0.12in;
+        size: 3.5in 1.125in;
+        margin: 0;
       }
 
+      html,
       body {
+        width: 3.5in;
+        height: 1.125in;
         margin: 0;
+        overflow: hidden;
         font-family: Arial, sans-serif;
         color: #111827;
         background: #ffffff;
       }
 
       .label {
-        width: 2.9in;
-        min-height: 1.1in;
-        padding: 0.28in;
+        width: 3.5in;
+        height: 1.125in;
+        padding: 0.08in 0.11in;
         border: 1px solid #111827;
-        border-radius: 10px;
+        border-radius: 0;
         display: grid;
-        gap: 0.1in;
+        gap: 0.02in;
         box-sizing: border-box;
       }
 
       .topline {
         display: flex;
         justify-content: space-between;
-        gap: 0.2in;
-        font-size: 10px;
+        gap: 0.08in;
+        font-size: 8px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
       }
 
       h1 {
         margin: 0;
-        font-size: 18px;
+        font-size: 13px;
         line-height: 1.1;
       }
 
       p {
         margin: 0;
-        font-size: 11px;
-        line-height: 1.2;
+        font-size: 8px;
+        line-height: 1.1;
         color: #4b5563;
       }
 
       .issue {
-        padding-top: 0.06in;
+        padding-top: 0.02in;
         border-top: 1px solid #e5e7eb;
       }
     </style>
