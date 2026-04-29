@@ -11,14 +11,14 @@ function getSessionSecret() {
 export function getAuthUsers() {
   return [
     {
-      username: process.env.REPAIR_DESK_OWNER_USERNAME || "er4gadgets",
-      password: process.env.REPAIR_DESK_OWNER_PASSWORD || "Humberto11",
+      username: process.env.REPAIR_DESK_OWNER_USERNAME || "owner",
+      password: process.env.REPAIR_DESK_OWNER_PASSWORD || "change-me-owner-password",
       displayName: process.env.REPAIR_DESK_OWNER_NAME || "Store Owner",
       role: "owner"
     },
     {
       username: process.env.REPAIR_DESK_STAFF_USERNAME || "staff",
-      password: process.env.REPAIR_DESK_STAFF_PASSWORD || "staff1234",
+      password: process.env.REPAIR_DESK_STAFF_PASSWORD || "change-me-staff-password",
       displayName: process.env.REPAIR_DESK_STAFF_NAME || "Staff",
       role: "staff"
     }

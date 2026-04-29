@@ -6,7 +6,7 @@ Repair shop ticket system built with `Next.js`, with custom login, ticket intake
 
 The app currently includes:
 
-- Login page with the current shop credentials
+- Login page with local credential-based access
 - New ticket form
 - Ticket dashboard
 - Search by customer name or phone
@@ -74,19 +74,9 @@ http://localhost:3000
 
 ## Required environment variables
 
-Put these in `.env.local`:
+Set your own local values in `.env.local` by copying `.env.local.example`.
 
-```env
-REPAIR_DESK_SESSION_SECRET=your-secret-here
-REPAIR_DESK_OWNER_USERNAME=er4gadgets
-REPAIR_DESK_OWNER_PASSWORD=Humberto11
-REPAIR_DESK_OWNER_NAME=Store Owner
-REPAIR_DESK_STAFF_USERNAME=staff
-REPAIR_DESK_STAFF_PASSWORD=staff1234
-REPAIR_DESK_STAFF_NAME=Staff
-NEXT_PUBLIC_SUPABASE_URL=https://jlxsizllrmxbbtsnmfnq.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key-here
-```
+Do not put real passwords or secrets in the README.
 
 ## Project structure
 
